@@ -1,6 +1,6 @@
 package exercises
 
-import lectures.part2oop.Generics.MyList
+//import lectures.part2oop.Generics.MyList
 
 abstract class MyList[+A] {
 
@@ -45,7 +45,7 @@ case class Cons[+A](h: A, t: MyList[A]) extends MyList[A] {
   def ++[B >:A](list: MyList[B]): MyList[B] = new Cons(h, t ++ list)
 
   override def filter(predicate: A => Boolean): MyList[A] =
-    if (predicate(h)) new Cons(h, t.filter(predicate))
+    if (predicate.apply(h)) new Cons(h, t.filter(predicate))
     else t.filter(predicate)
 
   override def map[B](transformer: A => B): MyList[B] =
@@ -54,7 +54,7 @@ case class Cons[+A](h: A, t: MyList[A]) extends MyList[A] {
   override def flatMap[B](transformer: A => MyList[B]): MyList[B] =
     transformer(h) ++ t.flatMap(transformer)
 }
-
+//
 //trait MyPredicate[-T] {
 //  def test(p: T): Boolean
 //}
@@ -62,7 +62,7 @@ case class Cons[+A](h: A, t: MyList[A]) extends MyList[A] {
 //trait MyTransformer[-A, B] {
 //  def transform(element: A): B
 //}
-
+//
 //class EvenPredicate extends MyPredicate[Int] {
 //  override def test(p: Int): Boolean = p % 2 == 0
 //}
@@ -80,33 +80,29 @@ object ListTest extends App {
   println(list.add(4).head)
   println(list.isEmpty)
   println(list.toString)
-  println(listOfInt.map(new Function1[Int, Int] {
-    override def apply(element: Int): Int = element * 2
-  }).toString)
-  println(listOfInt.filter(new Function1[Int, Boolean] {
-    override def apply(p: Int): Boolean = p % 2 == 0
-  }).toString)
+  println(listOfInt.map(x => x * 2).toString)
+  println(listOfInt.filter(_ % 2 == 0).toString)
   println(listOfInt ++ anotherlistOfInt)
-  println(listOfInt.flatMap(new Function1[Int, MyList[Int]] {
-    override def apply(element: Int): MyList[Int] = new Cons(element, new Cons(element +1, Empty))
-  }).toString)
+  println(listOfInt.flatMap(x => new Cons(x, new Cons(x +1, Empty))).toString)
 
   //case class
   println(list == dbllist)
 
-  val conc = new Function2[String, String, String] {
-    override def apply(v1: String, v2: String): String = v1 + v2
-  }
+  val concatinator: (String, String) => String = _ + _
 
+  println(concatinator("Hello ", "Scala"))
 
-  val superAdder = new Function1[Int, Int => Int] {
-    override def apply(x: Int): Int => Int = new Function1[Int, Int] {
+  val superAdder = new Function[Int, Int => Int] {
+    override def apply(x: Int): Int => Int = new Function[Int, Int] {
       override def apply(y: Int): Int = x + y
     }
   }
-  val ad1 = superAdder(3)
-  println(superAdder)
-  println(ad1)
-  println(ad1(4))
-  println(superAdder(3)(5))
+
+  val superAdder2 = (x: Int) => (y: Int) => x + y
+
+  val adder3 = superAdder(3)
+  println(adder3(4))
+  println(superAdder(3)(4)) //curried function
+  println(superAdder2(3)(4)) //curried function
+
 }
