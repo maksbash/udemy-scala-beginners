@@ -1,5 +1,9 @@
 package exercises
 
+import lectures.part2oop.Generics.MyList
+
+import scala.runtime.Nothing$
+
 //import lectures.part2oop.Generics.MyList
 
 abstract class MyList[+A] {
@@ -12,6 +16,11 @@ abstract class MyList[+A] {
   def map[B](transformer: A => B): MyList[B]
   def filter(predicate: A => Boolean): MyList[A]
   def flatMap[B](transformer: A => MyList[B]): MyList[B]
+
+  def foreach(f: A => Unit): Unit
+  def sort(compare: (A, A) => Int): MyList[A]
+  def zipWith[B, C](list: MyList[B], zip: (A, B) => C): MyList[C]
+  def fold[B](start: B)(f: (B, A) => B): B
 
   def ++[B >:A](list: MyList[B]): MyList[B]
 
@@ -30,6 +39,16 @@ case object Empty extends MyList[Nothing] {
   override def flatMap[B](transformer: Nothing => MyList[B]): MyList[B] = Empty
   override def filter(predicate: Nothing => Boolean): MyList[Nothing] = Empty
   def ++[B >: Nothing](list: MyList[B]): MyList[B] = list
+
+  override def foreach(f: Nothing => Unit): Unit = ()
+  override def sort(compare: (Nothing, Nothing) => Int): MyList[Nothing] = Empty
+  override def zipWith[B, C](list: MyList[B], zip: (Nothing, B) => C): MyList[C] =
+    if (!list.isEmpty) throw new RuntimeException("lists does not have same elements")
+    else Empty
+
+  override def fold[B](start: B)(f: (B, Nothing) => B): B = start
+
+
 }
 
 case class Cons[+A](h: A, t: MyList[A]) extends MyList[A] {
@@ -53,6 +72,30 @@ case class Cons[+A](h: A, t: MyList[A]) extends MyList[A] {
 
   override def flatMap[B](transformer: A => MyList[B]): MyList[B] =
     transformer(h) ++ t.flatMap(transformer)
+
+  override def foreach(f: A => Unit): Unit = {
+    f(h)
+    tail.foreach(f)
+  }
+
+  override def sort(compare: (A, A) => Int): MyList[A] = {
+    def insert(x: A, sortedList: MyList[A]): MyList[A] =
+      if (sortedList.isEmpty) new Cons[A](x, Empty)
+      else if (compare(x, sortedList.head) <= 0) Cons(x, sortedList)
+      else Cons(sortedList.head, insert(x, sortedList.tail))
+    val sortedTail = t.sort(compare)
+    insert(h, sortedTail)
+  }
+
+  override def zipWith[B, C](list: MyList[B], zip: (A, B) => C): MyList[C] =
+    if (list.isEmpty) throw new RuntimeException("lists does not have same elements")
+    else Cons(zip(h, list.head), t.zipWith(list.tail, zip))
+
+  override def fold[B](start: B)(f: (B, A) => B): B = {
+    val newStart = f(start, h)
+    t.fold(newStart)(f)
+  }
+
 }
 //
 //trait MyPredicate[-T] {
@@ -75,7 +118,7 @@ object ListTest extends App {
   val list = new Cons(1, new Cons(2, new Cons("a", Empty)))
   val dbllist = new Cons(1, new Cons(2, new Cons("a", Empty)))
   val listOfInt = new Cons(1, new Cons(2, new Cons(3, Empty)))
-  val anotherlistOfInt = new Cons(4, new Cons(5, Empty))
+  val anotherlistOfInt = new Cons(4, new Cons(5, new Cons( 9, Empty)))
   println(list.tail.head)
   println(list.add(4).head)
   println(list.isEmpty)
@@ -105,4 +148,27 @@ object ListTest extends App {
   println(superAdder(3)(4)) //curried function
   println(superAdder2(3)(4)) //curried function
 
+  //hofs
+  println("---")
+  anotherlistOfInt.foreach(println)
+  println("---")
+
+  anotherlistOfInt.sort((x, y) => y - x).foreach(println)
+  anotherlistOfInt.zipWith(listOfInt, _ + _).foreach(println)
+
+  println("---")
+  println(anotherlistOfInt.fold(0)(_ + _))
+
+  def toCurry(f: (Int, Int) => Int): Int => Int => Int = (x: Int) => (y: Int) => f(x, y) // x => y => f(x, y)
+  def fromCurry(f: Int => Int => Int): (Int, Int) => Int = (x: Int, y: Int) => f(x)(y) // (x, y) => f(x)(y)
+
+  def compose[A,B,T](f: A => B, g: T => A): T => B = x => f(g(x))
+  def andThen[A,B,C](f: A => B, g: B => C): A => C = x => g(f(x))
+
+  val forComprehensionTest = for {
+    l1 <- listOfInt
+    l2 <- anotherlistOfInt
+  } yield l1 + l2
+
+  println(forComprehensionTest)
 }
